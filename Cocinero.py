@@ -1,78 +1,145 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import ttk, messagebox
 from Clases import Restaurante
 
-# 🎨 Colores corporativos
+# Configuración de estilos
 FONDO = "#F5E9CC"
-FUENTE = ("Times New Roman", 11)
-TEXTO_TITULO = ("Times New Roman", 14, "bold")
+COLOR_ENCABEZADO = "#8B2F23"
+FUENTE_TITULO = ("Times New Roman", 14, "bold")
+FUENTE_NORMAL = ("Times New Roman", 11)
+FUENTE_PRODUCTOS = ("Times New Roman", 10)
 
-def ventana_cocinero(restaurante):
+def ventana_cocinero(restaurante, nombre_usuario):
     ventana = tk.Tk()
     ventana.iconbitmap("Logo_migaja.ico")
-    ventana.title("👨‍🍳 Cocina - Pedidos Pendientes")
-    ventana.geometry("500x600")
+    ventana.title(f"👨‍🍳 Cocina - {nombre_usuario}")
+    ventana.geometry("800x700")
     ventana.configure(bg=FONDO)
-
-    tk.Label(ventana, text="📋 Pedidos pendientes:", font=TEXTO_TITULO, bg=FONDO).pack(pady=10)
-
-    # Frame con Scroll
-    canvas = tk.Canvas(ventana, bg=FONDO, highlightthickness=0)
-    scrollbar = tk.Scrollbar(ventana, orient="vertical", command=canvas.yview)
-    scroll_frame = tk.Frame(canvas, bg=FONDO)
-
-    scroll_frame.bind(
+    
+    # Frame principal con scroll
+    main_frame = tk.Frame(ventana, bg=FONDO)
+    main_frame.pack(fill="both", expand=True, padx=20, pady=10)
+    
+    # Canvas y scrollbar
+    canvas = tk.Canvas(main_frame, bg=FONDO, highlightthickness=0)
+    scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+    scrollable_frame = tk.Frame(canvas, bg=FONDO)
+    
+    scrollable_frame.bind(
         "<Configure>",
-        lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        lambda e: canvas.configure(
+            scrollregion=canvas.bbox("all")
+        )
     )
-
-    canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+    
+    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
     canvas.configure(yscrollcommand=scrollbar.set)
-
+    
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="right", fill="y")
-
-    pedidos = restaurante.obtener_pedidos_pendientes()
-
-    if not pedidos:
-        tk.Label(scroll_frame, text="No hay pedidos pendientes", font=FUENTE, bg=FONDO).pack(pady=20)
-    else:
+    
+    # Título
+    tk.Label(scrollable_frame, 
+             text=f"Pedidos Pendientes - {nombre_usuario}",
+             font=FUENTE_TITULO, 
+             bg=FONDO,
+             fg=COLOR_ENCABEZADO).pack(pady=(0, 15))
+    
+    # Contenedor de pedidos
+    pedidos_frame = tk.Frame(scrollable_frame, bg=FONDO)
+    pedidos_frame.pack(fill="x")
+    
+    def mostrar_pedidos():
+        # Limpiar pedidos anteriores
+        for widget in pedidos_frame.winfo_children():
+            widget.destroy()
+        
+        # Obtener pedidos
+        pedidos = restaurante.obtener_pedidos_pendientes()
+        
+        if not pedidos:
+            tk.Label(pedidos_frame, 
+                    text="No hay pedidos pendientes",
+                    font=FUENTE_NORMAL,
+                    bg=FONDO).pack(pady=20)
+            return
+            
         for pedido in pedidos:
-            frame = tk.Frame(scroll_frame, relief=tk.RIDGE, borderwidth=2, padx=10, pady=10, bg="#FAF3E0")
-            frame.pack(padx=30, pady=5, fill="x")
-
-            mesa = pedido.get('mesa', 'Desconocida')
-            tk.Label(frame, text=f"Mesa: {mesa}", font=("Times New Roman", 12, "bold"), bg="#FAF3E0").pack(anchor="center")
-
-            for item in pedido.get("items", []):
-                nombre = item.get("nombre", "Producto")
-                precio = item.get("precio", "???")
-                tk.Label(frame, text=f"- {nombre} (${precio})", font=FUENTE, bg="#FAF3E0").pack(anchor="center")
-
-            total = pedido.get("total", 0)
-            tk.Label(frame, text=f"Total: ${total}", font=("Times New Roman", 11, "italic"), bg="#FAF3E0").pack(anchor="center")
-
-            def marcar_servido_closure(pedido_id):
-                return lambda: marcar_servido(pedido_id, ventana, restaurante)
-
-            tk.Button(frame, text="✅ Marcar como servido", bg="#8B2F23", fg="white", font=FUENTE,
-                      command=marcar_servido_closure(pedido["id"])).pack(pady=5)
-
-    # Botón Volver
-    def volver():
-        ventana.destroy()
-        import Frontend
-        Frontend.seleccionar_rol()
-
-    tk.Button(ventana, text="🔙 Volver", command=volver, bg="#40754C", fg="white", font=FUENTE).pack(pady=10)
-
+            # Frame para cada pedido
+            frame_pedido = tk.Frame(pedidos_frame, 
+                                  bg="white",
+                                  relief="groove",
+                                  borderwidth=1,
+                                  padx=10,
+                                  pady=10)
+            frame_pedido.pack(fill="x", pady=5, padx=5)
+            
+            # Encabezado del pedido
+            tk.Label(frame_pedido, 
+                    text=f"📝 Pedido #{pedido.get('id', '')} - Mesa: {pedido.get('mesa', 'S/M')}",
+                    font=FUENTE_TITULO,
+                    bg="white",
+                    anchor="w").pack(fill="x")
+            
+            # Productos
+            productos_frame = tk.Frame(frame_pedido, bg="white")
+            productos_frame.pack(fill="x", pady=(5, 0))
+            
+            for item in pedido.get('items', []):
+                tk.Label(productos_frame,
+                        text=f"  • {item['nombre']} (${item['precio']})",
+                        font=FUENTE_PRODUCTOS,
+                        bg="white",
+                        anchor="w").pack(fill="x")
+            
+            # Total y botón
+            footer_frame = tk.Frame(frame_pedido, bg="white")
+            footer_frame.pack(fill="x", pady=(10, 0))
+            
+            tk.Label(footer_frame,
+                    text=f"Total: ${pedido.get('total', 0):.2f}",
+                    font=FUENTE_NORMAL,
+                    bg="white").pack(side="left")
+            
+            tk.Button(footer_frame,
+                     text="Marcar como Servido",
+                     command=lambda p=pedido['id']: marcar_servido(p),
+                     bg="#40754C",
+                     fg="white",
+                     font=FUENTE_NORMAL).pack(side="right")
+    
+    def marcar_servido(pedido_id):
+        if messagebox.askyesno("Confirmar", "¿Marcar este pedido como servido?"):
+            try:
+                restaurante.marcar_pedido_servido(pedido_id)
+                messagebox.showinfo("Éxito", "Pedido marcado como servido")
+                mostrar_pedidos()
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo actualizar: {str(e)}")
+    
+    # Botones de control
+    control_frame = tk.Frame(scrollable_frame, bg=FONDO)
+    control_frame.pack(fill="x", pady=(20, 10))
+    
+    tk.Button(control_frame,
+             text="🔄 Actualizar Pedidos",
+             command=mostrar_pedidos,
+             bg=COLOR_ENCABEZADO,
+             fg="white",
+             font=FUENTE_NORMAL).pack(side="left", padx=5)
+    
+    tk.Button(control_frame,
+             text="🔙 Cerrar Sesión",
+             command=lambda: [ventana.destroy(), iniciar_app()],
+             bg="#333333",
+             fg="white",
+             font=FUENTE_NORMAL).pack(side="right", padx=5)
+    
+    # Mostrar pedidos al iniciar
+    mostrar_pedidos()
+    
     ventana.mainloop()
 
-def marcar_servido(pedido_id, ventana, restaurante):
-    pedido = restaurante.obtener_pedido_por_id(pedido_id)
-    restaurante.descontar_inventario(pedido)
-    restaurante.marcar_pedido_servido(pedido_id)
-    messagebox.showinfo("✅ Pedido servido", f"El pedido {pedido_id} ha sido marcado como servido.")
-    ventana.destroy()
-    ventana_cocinero(restaurante)  # 🔄 Recarga la ventana
-
+def iniciar_app():
+    # Función dummy para el cierre de sesión
+    pass
