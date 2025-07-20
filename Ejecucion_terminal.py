@@ -1,6 +1,9 @@
+
+from Conexion_fb import db
 from Clases import Restaurante, Pedido
 
-restaurante = Restaurante()
+restaurante = Restaurante(db)
+
 
 def mostrar_menu():
     print("\n----- MENÚ LA MIGAJA -----")
@@ -101,3 +104,5 @@ if __name__ == "__main__":
             break
         else:
             print("Opción inválida.")
+
+           
